@@ -1,0 +1,45 @@
+name: PHP Composer
+
+on:
+  push:
+    branches: [ "master" ] # Replace "master" with your desired branch to trigger on
+  pull_request:
+    branches: [ "main" ]
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest  # Specify the runner OS (e.g., Ubuntu)
+    steps:
+      - uses: actions/checkout@v3  # Checks out your code from GitHub
+      - name: Install dependencies (PHP and MySQL client)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php php-mysqli
+      - name: Run composer install (if applicable)
+        run: |
+          composer install  # If you're using Composer for dependency management
+      - name: Execute unit tests (replace with your testing command)
+        run: |
+          ./vendor/bin/phpunit tests/  # Replace with your test directory and command
+        fail-fast: true  # Stop the job on the first test failure
+
+  deploy-to-staging:  # Add this job for deployment automation
+    runs-on: ubuntu-latest
+    needs: build-and-test  # This job depends on the successful completion of "build-and-test"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure SSH access (replace with your credentials)
+        run: |
+          echo "HOST your_staging_server_hostname PORT 22" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          echo "your_ssh_private_key" | tr -d '\r' > id_rsa  # Replace with your private key
+          chmod 600 id_rsa
+          eval "$(ssh-agent -s)"  # Add the SSH key to the agent
+          ssh-add id_rsa
+      - name: Transfer files to staging server (replace with your paths)
+        run: |
+          scp -r ./* your_username@your_staging_server_hostname:/var/www/html/my-crud-app
+      - name: (Optional) Run database migrations or other deployment tasks on the server
+        run: |
+          ssh your_username@your_staging_server_hostname "cd /var/www/html/my-crud-app && ./deploy.sh"  # Replace with your script
+
+
